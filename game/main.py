@@ -4,6 +4,12 @@ import random
 
 pygame.init()
 
+# Loading audio files
+beep_sound = pygame.mixer.Sound('beep.mp3') # played  when the bird is too high/low relative the the pipe entry
+clear_sound = pygame.mixer.Sound('clear.mp3') # played when the bird clears the pipes
+fail_sound = pygame.mixer.Sound('fail.mp3') # played when bird collides with pipe or hits the ground
+
+
 WINDOW_WIDTH, WINDOW_HEIGHT = 1200, 800
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("My Game")
@@ -123,10 +129,41 @@ while running:
         bird.update()
         pipe_service.draw()
         bird.draw()
+
+        # Placeholder values of y1 and y2 - will need to be updated with current values of y1 and y2 (refer to excalidraw)
+        y1 = 400
+        y2 = 200
+        # Placeholder values of x_bird and y_bird - will need to be updated with the current x and y position of the bird
+        x_bird = 300 
+        y_bird = 300 
+
+        # if birds current y position is postion then no alert will be played
+        if y2 <= y_bird <= y1:
+            beep_volume = 0.0
+        
+        elif y_bird > y1:
+            # beep gets louder and more frequent the higher the bird goes above y1, beep_volume between 0 and 1 
+            beep_volume = (y_bird - y1) / (WINDOW_HEIGHT - y1)
+
+        elif y_bird < y2:
+            # beep gets louder the lower the bird goes below y2
+            beep_volume = (y2 - y_bird) / y2
+
+
+        if x_bird > INITIAL_NEXT_PIPE_X and x_bird < INITIAL_NEXT_PIPE_X + PIPE_WIDTH and y2 <= y_bird <= y1:
+            # if the bird clears the pipe, then a 'success' sound will be played
+            clear_sound.play() 
+
+
         if pipe_service.check_collision(bird) or bird.hit_ground:
             game_state = "GAME_OVER"
+            fail_sound.play() # fail sound will be played, so user is aware they need to restart
     elif game_state == "GAME_OVER":
         display_message("Press space bar to start again")
+
+    # Set volume
+    beep_sound.set_volume(beep_volume)
+    beep_sound.play()
 
     pygame.display.flip()
 
