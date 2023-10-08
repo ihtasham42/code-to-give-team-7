@@ -9,6 +9,12 @@ beep_sound = pygame.mixer.Sound('beep.mp3') # played  when the bird is too high/
 clear_sound = pygame.mixer.Sound('clear.mp3') # played when the bird clears the pipes
 fail_sound = pygame.mixer.Sound('fail.mp3') # played when bird collides with pipe or hits the ground
 
+flap_sound = pygame.mixer.Sound("game/sfx/flap.mp3")
+score_sound = pygame.mixer.Sound("game/sfx/score.mp3")
+
+score = 0
+
+big_font = pygame.font.Font(None, 72)
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 1200, 800
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -57,6 +63,7 @@ class Bird:
 
     def flap(self):
         self.velocity = JUMP_VELOCITY
+        flap_sound.play()
 
     def update(self):
         self.x += BIRD_X_SPEED
@@ -74,10 +81,18 @@ class PipePair:
     def __init__(self, x):
         self.x = x
         self.gap_start = random.randrange(PIPE_GAP_MARGIN, WINDOW_HEIGHT - PIPE_GAP_MARGIN - PIPE_Y_GAP )
+        self.passed = False
 
     def draw(self):
         pygame.draw.rect(window, GREEN, (self.x - bird.x, 0, PIPE_WIDTH, self.gap_start))
         pygame.draw.rect(window, GREEN, (self.x - bird.x, self.gap_start + PIPE_Y_GAP, PIPE_WIDTH, WINDOW_HEIGHT))
+
+def draw_status():
+    global score
+
+    score_text = big_font.render(str(score), True, (0, 0, 0)) 
+
+    window.blit(score_text, (20, 20)) 
 
 class PipeService:
     def __init__(self):
@@ -91,6 +106,14 @@ class PipeService:
             self.next_pipe_x += PIPE_X_GAP
 
         self.pipe_pairs = [p for p in self.pipe_pairs if p.x > bird.x - PIPE_WIDTH]
+
+    def check_score(self, bird):
+        for pipe in self.pipe_pairs:
+            if pipe.x < bird.x and not pipe.passed:
+                pipe.passed = True
+                score_sound.play()
+                global score
+                score += 1
 
     def draw(self):
         for pipe_pair in self.pipe_pairs:
@@ -117,6 +140,7 @@ while running:
             if game_state == "PLAYING":
                 bird.flap()
             elif game_state == "GAME_OVER":
+                score = 0
                 bird = Bird()
                 pipe_service = PipeService()
                 game_state = "PLAYING"
@@ -128,6 +152,7 @@ while running:
         pipe_service.update()
         bird.update()
         pipe_service.draw()
+        pipe_service.check_score(bird) 
         bird.draw()
 
         # Placeholder values of y1 and y2 - will need to be updated with current values of y1 and y2 (refer to excalidraw)
@@ -159,11 +184,13 @@ while running:
             game_state = "GAME_OVER"
             fail_sound.play() # fail sound will be played, so user is aware they need to restart
     elif game_state == "GAME_OVER":
-        display_message("Press space bar to start again")
+        display_message(f"You scored {score}. Press space bar to start again!")
 
     # Set volume
     beep_sound.set_volume(beep_volume)
     beep_sound.play()
+
+    draw_status()
 
     pygame.display.flip()
 
