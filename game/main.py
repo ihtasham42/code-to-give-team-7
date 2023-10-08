@@ -13,7 +13,7 @@ clear_sound = pygame.mixer.Sound('clear.mp3') # played when the bird clears the 
 fail_sound = pygame.mixer.Sound('fail.mp3') # played when bird collides with pipe or hits the ground
 
 flap_sound = pygame.mixer.Sound("game/sfx/flap.mp3")
-score_sound = pygame.mixer.Sound("game/sfx/score.mp3")
+
 
 score = 0
 
@@ -44,7 +44,7 @@ BLACK = (0, 0, 0)
 
 BIRD_SIZE = 50
 BIRD_X_DRAW = 50
-BIRD_X_SPEED = 3
+BIRD_X_SPEED = 2
 GRAVITY = 0.1
 TERMINAL_VELOCITY = -2
 JUMP_VELOCITY = 5
@@ -57,11 +57,20 @@ PIPE_WIDTH = 150
 PIPE_GAP_MARGIN = 150
 INITIAL_NEXT_PIPE_X = 600
 
+bird_image = pygame.image.load('game/img/bird.png')
+bird_image = pygame.transform.scale(bird_image, (BIRD_SIZE * 1.2, BIRD_SIZE))
+
+background_image = pygame.image.load('game/img/background.png')  # Add your path here
+background_image = pygame.transform.scale(background_image, (WINDOW_WIDTH, WINDOW_HEIGHT))
+background_x = 0  # initial position
+SCROLL_SPEED = 5  # adjust the speed as needed
+
 game_state = "PLAYING"
 
 running = True
 
 score = 0
+
 
 def display_message(message):
     font = pygame.font.Font(None, 36)
@@ -76,7 +85,7 @@ class Bird:
         self.hit_ground = False
 
     def draw(self):
-        pygame.draw.rect(window, RED, (BIRD_X_DRAW, self.y, BIRD_SIZE, BIRD_SIZE))
+        window.blit(bird_image, (BIRD_X_DRAW, self.y))
 
     def flap(self):
         self.velocity = JUMP_VELOCITY
@@ -92,6 +101,18 @@ class Bird:
             self.y = WINDOW_HEIGHT - BIRD_SIZE  # Prevent sinking into the ground
             self.hit_ground = True
 
+        closest_pipe_pair = None
+
+        for pipe_pair in pipe_service.pipe_pairs:
+            if pipe_pair.x > bird.x:
+                if not closest_pipe_pair or pipe_pair.x - bird.x < closest_pipe_pair.x - bird.x:
+                    closest_pipe_pair = pipe_pair
+
+        if closest_pipe_pair:
+            global distance_to_gap
+            distance_to_gap = abs(closest_pipe_pair.gap_start + PIPE_Y_GAP // 2 - bird.y)
+
+        print(distance_to_gap)
         
 
 class PipePair:
@@ -101,8 +122,8 @@ class PipePair:
         self.passed = False
 
     def draw(self):
-        pygame.draw.rect(window, GREEN, (self.x - bird.x, 0, PIPE_WIDTH, self.gap_start))
-        pygame.draw.rect(window, GREEN, (self.x - bird.x, self.gap_start + PIPE_Y_GAP, PIPE_WIDTH, WINDOW_HEIGHT))
+        pygame.draw.rect(window, RED, (self.x - bird.x, 0, PIPE_WIDTH, self.gap_start))
+        pygame.draw.rect(window, RED, (self.x - bird.x, self.gap_start + PIPE_Y_GAP, PIPE_WIDTH, WINDOW_HEIGHT))
 
 def draw_status():
     global score
@@ -128,7 +149,7 @@ class PipeService:
         for pipe in self.pipe_pairs:
             if pipe.x < bird.x and not pipe.passed:
                 pipe.passed = True
-                score_sound.play()
+                clear_sound.play()
                 global score
                 score += 1
 
@@ -148,6 +169,7 @@ class PipeService:
 
 bird = Bird()
 pipe_service = PipeService()
+distance_to_gap = 0
 
 # Function to callback for capturing audio data
 def callback(indata, frames, callback_time, status):
@@ -181,6 +203,7 @@ with sd.InputStream(device=input_device_index, channels=1, samplerate=RATE, call
                     pipe_service = PipeService()
                     game_state = "PLAYING"
 
+<<<<<<< HEAD
         
 
         if game_state == "PLAYING":
@@ -217,6 +240,46 @@ with sd.InputStream(device=input_device_index, channels=1, samplerate=RATE, call
             if x_bird > INITIAL_NEXT_PIPE_X and x_bird < INITIAL_NEXT_PIPE_X + PIPE_WIDTH and y2 <= y_bird <= y1:
                 # if the bird clears the pipe, then a 'success' sound will be played
                 clear_sound.play() 
+=======
+    if game_state == "PLAYING":
+        background_x -= SCROLL_SPEED
+        if background_x <= -WINDOW_WIDTH:
+            background_x = 0
+
+        # Draw the background
+        window.blit(background_image, (background_x, 0))
+        window.blit(background_image, (background_x + WINDOW_WIDTH, 0))
+
+        pipe_service.update()
+        bird.update()
+        pipe_service.draw()
+        pipe_service.check_score(bird) 
+        bird.draw()
+
+        # Placeholder values of x_bird and y_bird - will need to be updated with the current x and y position of the bird
+        x_bird = bird.x
+        y_bird = bird.y
+
+        yToGap = abs(distance_to_gap)
+        # if birds current y position is postion then no alert will be played
+
+
+        if yToGap < PIPE_Y_GAP // 2: # if bird within the gap of pipe
+            beep_volume = 0.0
+        
+        
+        elif yToGap > PIPE_Y_GAP // 2:
+            # beep gets louder the higher the bird goes above y1, beep_volume between 0 and 1 
+            distance_to_gap_edge = yToGap - PIPE_Y_GAP // 2
+            beep_volume = min(1.0, distance_to_gap_edge / (PIPE_Y_GAP // 2))
+
+            # Set volume
+            beep_sound.set_volume(beep_volume)
+            beep_sound.play()
+
+
+       
+>>>>>>> 11009f5f19e24400748789176202299d42458f36
 
 
             if pipe_service.check_collision(bird) or bird.hit_ground:
@@ -225,9 +288,12 @@ with sd.InputStream(device=input_device_index, channels=1, samplerate=RATE, call
         elif game_state == "GAME_OVER":
             display_message(f"You scored {score}. Press space bar to start again!")
 
+<<<<<<< HEAD
         # Set volume
         beep_sound.set_volume(beep_volume)
         beep_sound.play()
+=======
+>>>>>>> 11009f5f19e24400748789176202299d42458f36
 
         draw_status()
 
