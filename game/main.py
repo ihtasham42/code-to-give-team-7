@@ -54,6 +54,7 @@ running = True
 
 score = 0
 
+
 def display_message(message):
     font = pygame.font.Font(None, 36)
     text = font.render(message, True, BLACK)
@@ -83,6 +84,18 @@ class Bird:
             self.y = WINDOW_HEIGHT - BIRD_SIZE  # Prevent sinking into the ground
             self.hit_ground = True
 
+        closest_pipe_pair = None
+
+        for pipe_pair in pipe_service.pipe_pairs:
+            if pipe_pair.x > bird.x:
+                if not closest_pipe_pair or pipe_pair.x - bird.x < closest_pipe_pair.x - bird.x:
+                    closest_pipe_pair = pipe_pair
+
+        if closest_pipe_pair:
+            global distance_to_gap
+            distance_to_gap = abs(closest_pipe_pair.gap_start + PIPE_Y_GAP // 2 - bird.y)
+
+        print(distance_to_gap)
         
 
 class PipePair:
@@ -139,6 +152,7 @@ class PipeService:
 
 bird = Bird()
 pipe_service = PipeService()
+distance_to_gap = 0
 
 while running:
     for event in pygame.event.get():
