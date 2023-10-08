@@ -1,6 +1,9 @@
 import pygame
 import sys
 import random
+import sounddevice as sd
+import numpy as np
+import time
 
 pygame.init()
 
@@ -15,6 +18,20 @@ score_sound = pygame.mixer.Sound("game/sfx/score.mp3")
 score = 0
 
 big_font = pygame.font.Font(None, 72)
+
+# Constants
+CHUNK_SIZE = 1024  # Number of frames per buffer
+RATE = 44100  # Sample rate (samples per second)
+THRESHOLD = 0.1  # Adjust this threshold value as needed
+
+# Initialize a list to store loudness values for plotting
+loudness_values = []
+
+# Set the input device index (change this to the appropriate index)
+input_device_index = 1  # Change this to the desired input device index
+
+# Variable to store the time of the last detected spike
+last_spike_time = time.time()
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 1200, 800
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -132,71 +149,91 @@ class PipeService:
 bird = Bird()
 pipe_service = PipeService()
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            if game_state == "PLAYING":
-                bird.flap()
-            elif game_state == "GAME_OVER":
-                score = 0
-                bird = Bird()
-                pipe_service = PipeService()
-                game_state = "PLAYING"
+# Function to callback for capturing audio data
+def callback(indata, frames, callback_time, status):
+    print('hello world')
+    global last_spike_time
+    # Calculate loudness as root mean square (RMS) of the audio signal
+    loudness = np.sqrt(np.mean(indata**2))
+    # print(f"Loudness: {loudness:.2f} dB")
+    # Check if loudness exceeds the threshold
+    if loudness > THRESHOLD:
+        current_time = time.time()
+        if current_time - last_spike_time >= 1:  # Check if at least 1 second has passed since the last spike
+            print("True")  # Print True when loudness spikes
+            bird.flap()
+            last_spike_time = current_time
+    # Store loudness values for plotting
+    loudness_values.append(loudness)
 
-    
+with sd.InputStream(device=input_device_index, channels=1, samplerate=RATE, callback=callback, blocksize=CHUNK_SIZE):
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                
+                if game_state == "PLAYING":
+                    bird.flap()
+                elif game_state == "GAME_OVER":
+                    score = 0
+                    bird = Bird()
+                    pipe_service = PipeService()
+                    game_state = "PLAYING"
 
-    if game_state == "PLAYING":
-        window.fill(WHITE)
-        pipe_service.update()
-        bird.update()
-        pipe_service.draw()
-        pipe_service.check_score(bird) 
-        bird.draw()
-
-        # Placeholder values of y1 and y2 - will need to be updated with current values of y1 and y2 (refer to excalidraw)
-        y1 = 400
-        y2 = 200
-        # Placeholder values of x_bird and y_bird - will need to be updated with the current x and y position of the bird
-        x_bird = 300 
-        y_bird = 300 
-
-        # if birds current y position is postion then no alert will be played
-        if y2 <= y_bird <= y1:
-            beep_volume = 0.0
         
-        elif y_bird > y1:
-            # beep gets louder and more frequent the higher the bird goes above y1, beep_volume between 0 and 1 
-            beep_volume = (y_bird - y1) / (WINDOW_HEIGHT - y1)
 
-        elif y_bird < y2:
-            # beep gets louder the lower the bird goes below y2
-            beep_volume = (y2 - y_bird) / y2
+        if game_state == "PLAYING":
+            window.fill(WHITE)
+            
+            
+            
+            pipe_service.update()
+            bird.update()
+            pipe_service.draw()
+            pipe_service.check_score(bird) 
+            bird.draw()
+
+            # Placeholder values of y1 and y2 - will need to be updated with current values of y1 and y2 (refer to excalidraw)
+            y1 = 400
+            y2 = 200
+            # Placeholder values of x_bird and y_bird - will need to be updated with the current x and y position of the bird
+            x_bird = 300 
+            y_bird = 300 
+
+            # if birds current y position is postion then no alert will be played
+            if y2 <= y_bird <= y1:
+                beep_volume = 0.0
+            
+            elif y_bird > y1:
+                # beep gets louder and more frequent the higher the bird goes above y1, beep_volume between 0 and 1 
+                beep_volume = (y_bird - y1) / (WINDOW_HEIGHT - y1)
+
+            elif y_bird < y2:
+                # beep gets louder the lower the bird goes below y2
+                beep_volume = (y2 - y_bird) / y2
 
 
-        if x_bird > INITIAL_NEXT_PIPE_X and x_bird < INITIAL_NEXT_PIPE_X + PIPE_WIDTH and y2 <= y_bird <= y1:
-            # if the bird clears the pipe, then a 'success' sound will be played
-            clear_sound.play() 
+            if x_bird > INITIAL_NEXT_PIPE_X and x_bird < INITIAL_NEXT_PIPE_X + PIPE_WIDTH and y2 <= y_bird <= y1:
+                # if the bird clears the pipe, then a 'success' sound will be played
+                clear_sound.play() 
 
 
-        if pipe_service.check_collision(bird) or bird.hit_ground:
-            game_state = "GAME_OVER"
-            fail_sound.play() # fail sound will be played, so user is aware they need to restart
-    elif game_state == "GAME_OVER":
-        display_message(f"You scored {score}. Press space bar to start again!")
+            if pipe_service.check_collision(bird) or bird.hit_ground:
+                game_state = "GAME_OVER"
+                fail_sound.play() # fail sound will be played, so user is aware they need to restart
+        elif game_state == "GAME_OVER":
+            display_message(f"You scored {score}. Press space bar to start again!")
 
-    # Set volume
-    beep_sound.set_volume(beep_volume)
-    beep_sound.play()
+        # Set volume
+        beep_sound.set_volume(beep_volume)
+        beep_sound.play()
 
-    draw_status()
+        draw_status()
 
-    pygame.display.flip()
+        pygame.display.flip()
 
-    pygame.time.Clock().tick(60)
+        pygame.time.Clock().tick(60)
 
 pygame.quit()
 sys.exit()
-
-
