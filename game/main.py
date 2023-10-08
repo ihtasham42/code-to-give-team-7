@@ -10,7 +10,7 @@ clear_sound = pygame.mixer.Sound('clear.mp3') # played when the bird clears the 
 fail_sound = pygame.mixer.Sound('fail.mp3') # played when bird collides with pipe or hits the ground
 
 flap_sound = pygame.mixer.Sound("game/sfx/flap.mp3")
-score_sound = pygame.mixer.Sound("game/sfx/score.mp3")
+
 
 score = 0
 
@@ -132,7 +132,7 @@ class PipeService:
         for pipe in self.pipe_pairs:
             if pipe.x < bird.x and not pipe.passed:
                 pipe.passed = True
-                score_sound.play()
+                clear_sound.play()
                 global score
                 score += 1
 
@@ -184,29 +184,29 @@ while running:
         pipe_service.check_score(bird) 
         bird.draw()
 
-        # Placeholder values of y1 and y2 - will need to be updated with current values of y1 and y2 (refer to excalidraw)
-        y1 = 400
-        y2 = 200
         # Placeholder values of x_bird and y_bird - will need to be updated with the current x and y position of the bird
-        x_bird = 300 
-        y_bird = 300 
+        x_bird = bird.x
+        y_bird = bird.y
 
+        yToGap = abs(distance_to_gap)
         # if birds current y position is postion then no alert will be played
-        if y2 <= y_bird <= y1:
+
+
+        if yToGap < PIPE_Y_GAP // 2: # if bird within the gap of pipe
             beep_volume = 0.0
         
-        elif y_bird > y1:
-            # beep gets louder and more frequent the higher the bird goes above y1, beep_volume between 0 and 1 
-            beep_volume = (y_bird - y1) / (WINDOW_HEIGHT - y1)
+        
+        elif yToGap > PIPE_Y_GAP // 2:
+            # beep gets louder the higher the bird goes above y1, beep_volume between 0 and 1 
+            distance_to_gap_edge = yToGap - PIPE_Y_GAP // 2
+            beep_volume = min(1.0, distance_to_gap_edge / (PIPE_Y_GAP // 2))
 
-        elif y_bird < y2:
-            # beep gets louder the lower the bird goes below y2
-            beep_volume = (y2 - y_bird) / y2
+            # Set volume
+            beep_sound.set_volume(beep_volume)
+            beep_sound.play()
 
 
-        if x_bird > INITIAL_NEXT_PIPE_X and x_bird < INITIAL_NEXT_PIPE_X + PIPE_WIDTH and y2 <= y_bird <= y1:
-            # if the bird clears the pipe, then a 'success' sound will be played
-            clear_sound.play() 
+       
 
 
         if pipe_service.check_collision(bird) or bird.hit_ground:
@@ -215,11 +215,6 @@ while running:
     elif game_state == "GAME_OVER":
         display_message(f"You scored {score}. Press space bar to start again!")
 
-
-
-    # Set volume
-    beep_sound.set_volume(beep_volume)
-    beep_sound.play()
 
     draw_status()
 
