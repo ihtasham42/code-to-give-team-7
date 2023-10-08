@@ -40,6 +40,9 @@ PIPE_WIDTH = 150
 PIPE_GAP_MARGIN = 150
 INITIAL_NEXT_PIPE_X = 600
 
+bird_image = pygame.image.load('game/img/bird.png')
+bird_image = pygame.transform.scale(bird_image, (BIRD_SIZE * 1.2, BIRD_SIZE))
+
 game_state = "PLAYING"
 
 running = True
@@ -59,7 +62,7 @@ class Bird:
         self.hit_ground = False
 
     def draw(self):
-        pygame.draw.rect(window, RED, (BIRD_X_DRAW, self.y, BIRD_SIZE, BIRD_SIZE))
+        window.blit(bird_image, (BIRD_X_DRAW, self.y))
 
     def flap(self):
         self.velocity = JUMP_VELOCITY
