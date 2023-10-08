@@ -43,6 +43,11 @@ INITIAL_NEXT_PIPE_X = 600
 bird_image = pygame.image.load('game/img/bird.png')
 bird_image = pygame.transform.scale(bird_image, (BIRD_SIZE * 1.2, BIRD_SIZE))
 
+background_image = pygame.image.load('game/img/background.png')  # Add your path here
+background_image = pygame.transform.scale(background_image, (WINDOW_WIDTH, WINDOW_HEIGHT))
+background_x = 0  # initial position
+SCROLL_SPEED = 5  # adjust the speed as needed
+
 game_state = "PLAYING"
 
 running = True
@@ -87,8 +92,8 @@ class PipePair:
         self.passed = False
 
     def draw(self):
-        pygame.draw.rect(window, GREEN, (self.x - bird.x, 0, PIPE_WIDTH, self.gap_start))
-        pygame.draw.rect(window, GREEN, (self.x - bird.x, self.gap_start + PIPE_Y_GAP, PIPE_WIDTH, WINDOW_HEIGHT))
+        pygame.draw.rect(window, RED, (self.x - bird.x, 0, PIPE_WIDTH, self.gap_start))
+        pygame.draw.rect(window, RED, (self.x - bird.x, self.gap_start + PIPE_Y_GAP, PIPE_WIDTH, WINDOW_HEIGHT))
 
 def draw_status():
     global score
@@ -151,7 +156,14 @@ while running:
     
 
     if game_state == "PLAYING":
-        window.fill(WHITE)
+        background_x -= SCROLL_SPEED
+        if background_x <= -WINDOW_WIDTH:
+            background_x = 0
+
+        # Draw the background
+        window.blit(background_image, (background_x, 0))
+        window.blit(background_image, (background_x + WINDOW_WIDTH, 0))
+
         pipe_service.update()
         bird.update()
         pipe_service.draw()
@@ -188,6 +200,8 @@ while running:
             fail_sound.play() # fail sound will be played, so user is aware they need to restart
     elif game_state == "GAME_OVER":
         display_message(f"You scored {score}. Press space bar to start again!")
+
+
 
     # Set volume
     beep_sound.set_volume(beep_volume)
